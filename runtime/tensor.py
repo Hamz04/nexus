@@ -16,9 +16,8 @@ import mmap
 import os
 import struct
 import zlib
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 # ---------------------------------------------------------------------------
 # Conditional imports -- numpy & torch are optional at import time

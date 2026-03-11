@@ -6,13 +6,11 @@ tensor-parallel model sharding across GPUs, and latency benchmarking.
 
 from __future__ import annotations
 
-import copy
 import logging
 import statistics
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn

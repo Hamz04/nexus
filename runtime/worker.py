@@ -6,7 +6,6 @@ server, worker pool management, and graceful shutdown handling.
 
 from __future__ import annotations
 
-import atexit
 import mmap
 import multiprocessing as mp
 import os
@@ -18,9 +17,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 try:
     import structlog
