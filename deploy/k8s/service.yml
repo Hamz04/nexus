@@ -1,0 +1,68 @@
+# ============================================================================
+# Nexus - Kubernetes Services
+# ============================================================================
+# Two services:
+#   1. nexus-headless  - ClusterIP None for StatefulSet peer discovery
+#   2. nexus-api       - LoadBalancer for external API access
+# ============================================================================
+
+---
+# ----------------------------------------------------------------------------
+# Headless Service - StatefulSet Peer Discovery
+# ----------------------------------------------------------------------------
+# Provides stable DNS entries for each pod:
+#   nexus-0.nexus-headless.nexus-system.svc.cluster.local
+#   nexus-1.nexus-headless.nexus-system.svc.cluster.local
+#   nexus-2.nexus-headless.nexus-system.svc.cluster.local
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-headless
+  namespace: nexus-system
+  labels:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: peer-discovery
+    app.kubernetes.io/part-of: nexus-inference
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: inference-engine
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+
+---
+# ----------------------------------------------------------------------------
+# API Service - External LoadBalancer
+# ----------------------------------------------------------------------------
+# Routes external traffic to healthy Nexus pods via load balancer.
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-api
+  namespace: nexus-system
+  labels:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: nexus-inference
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: inference-engine
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  sessionAffinity: None

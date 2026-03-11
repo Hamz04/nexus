@@ -1,0 +1,218 @@
+# ============================================================================
+# Nexus Distributed AI Inference Engine - Docker Compose
+# ============================================================================
+# 3-node cluster with Prometheus, Grafana, and Redis infrastructure
+# Usage: docker compose up -d
+# ============================================================================
+
+version: "3.8"
+
+services:
+  # --------------------------------------------------------------------------
+  # Nexus Node 1 (Leader)
+  # --------------------------------------------------------------------------
+  nexus-node-1:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: nexus-node-1
+    hostname: nexus-node-1
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ID=nexus-node-1
+      - LISTEN_ADDR=0.0.0.0:8080
+      - PEERS=nexus-node-2:8080,nexus-node-3:8080
+      - REDIS_ADDR=redis:6379
+      - LOG_LEVEL=info
+      - CLUSTER_BOOTSTRAP=true
+    volumes:
+      - model-cache:/app/models
+    networks:
+      - nexus-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu]
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Nexus Node 2
+  # --------------------------------------------------------------------------
+  nexus-node-2:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: nexus-node-2
+    hostname: nexus-node-2
+    ports:
+      - "8081:8080"
+    environment:
+      - NODE_ID=nexus-node-2
+      - LISTEN_ADDR=0.0.0.0:8080
+      - PEERS=nexus-node-1:8080,nexus-node-3:8080
+      - REDIS_ADDR=redis:6379
+      - LOG_LEVEL=info
+      - CLUSTER_BOOTSTRAP=false
+    volumes:
+      - model-cache:/app/models
+    networks:
+      - nexus-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu]
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      nexus-node-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Nexus Node 3
+  # --------------------------------------------------------------------------
+  nexus-node-3:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: nexus-node-3
+    hostname: nexus-node-3
+    ports:
+      - "8082:8080"
+    environment:
+      - NODE_ID=nexus-node-3
+      - LISTEN_ADDR=0.0.0.0:8080
+      - PEERS=nexus-node-1:8080,nexus-node-2:8080
+      - REDIS_ADDR=redis:6379
+      - LOG_LEVEL=info
+      - CLUSTER_BOOTSTRAP=false
+    volumes:
+      - model-cache:/app/models
+    networks:
+      - nexus-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      nexus-node-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Prometheus - Metrics Collection
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nexus-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - nexus-net
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Grafana - Dashboards & Visualization
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nexus-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/nexus/dashboard.json:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/nexus/dashboard.json
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=nexus
+    networks:
+      - nexus-net
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Redis - Shared State & Caching
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - nexus-net
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# ----------------------------------------------------------------------------
+# Networks
+# ----------------------------------------------------------------------------
+networks:
+  nexus-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ----------------------------------------------------------------------------
+# Volumes
+# ----------------------------------------------------------------------------
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  model-cache:
+    driver: local
+  redis-data:
+    driver: local

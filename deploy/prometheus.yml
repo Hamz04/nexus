@@ -1,0 +1,47 @@
+# ============================================================================
+# Nexus - Prometheus Configuration
+# ============================================================================
+# Scrapes all Nexus cluster nodes and self-monitors Prometheus.
+# ============================================================================
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+  scrape_timeout: 5s
+
+  external_labels:
+    cluster: "nexus"
+    environment: "production"
+
+# ----------------------------------------------------------------------------
+# Scrape Configurations
+# ----------------------------------------------------------------------------
+scrape_configs:
+  # --------------------------------------------------------------------------
+  # Job: nexus - Nexus cluster node metrics
+  # --------------------------------------------------------------------------
+  - job_name: "nexus"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - "nexus-node-1:8080"
+          - "nexus-node-2:8080"
+          - "nexus-node-3:8080"
+        labels:
+          service: "nexus-inference"
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "nexus-node-(\\d+):.*"
+        target_label: node_id
+        replacement: "node-$1"
+
+  # --------------------------------------------------------------------------
+  # Job: prometheus - Self-scrape for Prometheus health
+  # --------------------------------------------------------------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+        labels:
+          service: "prometheus"

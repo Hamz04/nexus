@@ -1,0 +1,19 @@
+# ============================================================================
+# Nexus - GPU Resource Quota
+# ============================================================================
+# Limits total GPU allocation within the nexus-system namespace to 16 GPUs.
+# Prevents runaway scheduling from consuming all cluster GPU capacity.
+# ============================================================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: gpu-quota
+  namespace: nexus-system
+  labels:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: resource-management
+    app.kubernetes.io/part-of: nexus-inference
+spec:
+  hard:
+    requests.nvidia.com/gpu: "16"
+    limits.nvidia.com/gpu: "16"

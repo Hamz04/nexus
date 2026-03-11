@@ -1,0 +1,13 @@
+# ============================================================================
+# Nexus - Kubernetes Namespace
+# ============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-system
+  labels:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/part-of: nexus-inference
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Nexus Distributed AI Inference Engine namespace"

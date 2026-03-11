@@ -1,0 +1,166 @@
+# ============================================================================
+# Nexus - Kubernetes StatefulSet
+# ============================================================================
+# 3-replica StatefulSet with GPU resource reservations, health probes,
+# pod anti-affinity, and model-cache PVC.
+# ============================================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nexus
+  namespace: nexus-system
+  labels:
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/component: inference-engine
+    app.kubernetes.io/part-of: nexus-inference
+spec:
+  serviceName: nexus-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nexus
+      app.kubernetes.io/component: inference-engine
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nexus
+        app.kubernetes.io/component: inference-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 60
+
+      # ----------------------------------------------------------------------
+      # Pod Anti-Affinity: spread across physical nodes
+      # ----------------------------------------------------------------------
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - nexus
+              topologyKey: kubernetes.io/hostname
+
+      # ----------------------------------------------------------------------
+      # Tolerations for GPU nodes
+      # ----------------------------------------------------------------------
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+      # ----------------------------------------------------------------------
+      # Node selector for GPU-equipped nodes
+      # ----------------------------------------------------------------------
+      nodeSelector:
+        accelerator: nvidia-gpu
+
+      containers:
+        - name: nexus
+          image: nexus:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # ------------------------------------------------------------------
+          # Environment Variables
+          # ------------------------------------------------------------------
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: LISTEN_ADDR
+              value: "0.0.0.0:8080"
+            - name: PEERS
+              value: "nexus-0.nexus-headless.nexus-system.svc.cluster.local:8080,nexus-1.nexus-headless.nexus-system.svc.cluster.local:8080,nexus-2.nexus-headless.nexus-system.svc.cluster.local:8080"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: MODEL_CACHE_DIR
+              value: "/app/models"
+
+          # ------------------------------------------------------------------
+          # Resource Limits & GPU Reservation
+          # ------------------------------------------------------------------
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+              nvidia.com/gpu: "4"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+              nvidia.com/gpu: "4"
+
+          # ------------------------------------------------------------------
+          # Health Probes
+          # ------------------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /v1/health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
+
+          startupProbe:
+            httpGet:
+              path: /v1/health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+
+          # ------------------------------------------------------------------
+          # Volume Mounts
+          # ------------------------------------------------------------------
+          volumeMounts:
+            - name: model-cache
+              mountPath: /app/models
+            - name: shm
+              mountPath: /dev/shm
+
+      # ----------------------------------------------------------------------
+      # Shared memory volume for PyTorch IPC
+      # ----------------------------------------------------------------------
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+
+  # --------------------------------------------------------------------------
+  # Volume Claim Templates
+  # --------------------------------------------------------------------------
+  volumeClaimTemplates:
+    - metadata:
+        name: model-cache
+        labels:
+          app.kubernetes.io/name: nexus
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi

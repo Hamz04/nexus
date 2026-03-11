@@ -1,0 +1,82 @@
+# ─── Go ───────────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+*.pprof
+coverage.out
+coverage.html
+dist/
+bin/
+vendor/
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+coverage-python.xml
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# ─── CUDA / GPU ───────────────────────────────────────────────
+*.ptx
+*.cubin
+*.fatbin
+*.o
+*.a
+cuda-memcheck.*
+
+# ─── IDE ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Docker ───────────────────────────────────────────────────
+*.log
+docker-compose.override.yml
+
+# ─── Nexus Runtime ────────────────────────────────────────────
+# Model artifacts (large files)
+models/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+!go.sum
+
+# Shared memory segments
+/dev/shm/nexus_*
+
+# WAL and state snapshots
+data/
+*.wal
+*.snap
+
+# ─── Secrets ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
