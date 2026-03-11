@@ -1,8 +1,6 @@
 package observability
 
 import (
-	"encoding/json"
-	"fmt"
 	"math"
 	"sync"
 	"time"
