@@ -62,8 +62,6 @@ type Command struct {
 // Manager orchestrates the cluster: Raft consensus, health checking,
 // model registry, and node membership.
 type Manager struct {
-	mu sync.RWMutex
-
 	raftNode    *raft.RaftNode
 	healthCheck *HealthChecker
 	state       *ClusterState

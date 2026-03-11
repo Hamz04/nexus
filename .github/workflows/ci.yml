@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.24'
   PYTHON_VERSION: '3.11'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -112,7 +112,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install ruff mypy numpy torch --index-url https://download.pytorch.org/whl/cpu
+          pip install ruff mypy numpy
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Run ruff linter
         run: ruff check runtime/
@@ -137,7 +138,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pytest pytest-cov pytest-asyncio numpy torch --index-url https://download.pytorch.org/whl/cpu
+          pip install pytest pytest-cov pytest-asyncio numpy
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Run tests
         run: |
