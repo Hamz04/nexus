@@ -227,7 +227,7 @@ def serialize_tensor(
 # ---------------------------------------------------------------------------
 
 
-def deserialize_header(buf: Union[bytes, memoryview]) -> Dict[str, Any]:
+def deserialize_header(buf: Union[bytes, memoryview, "mmap.mmap"]) -> Dict[str, Any]:
     """Parse *only* the 32-byte fixed header (useful for routing decisions).
 
     Returns a dict with keys: magic, version, dtype, ndim, data_offset,

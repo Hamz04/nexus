@@ -374,7 +374,7 @@ class WorkerServer:
         if torch.cuda.is_available():
             dev_idx = int(self._device.split(":")[-1]) if ":" in self._device else 0
             gpu_mem_used = torch.cuda.memory_allocated(dev_idx)
-            gpu_mem_total = torch.cuda.get_device_properties(dev_idx).total_mem
+            gpu_mem_total = torch.cuda.get_device_properties(dev_idx).total_memory
             gpu_util = (
                 round(gpu_mem_used / gpu_mem_total, 4) if gpu_mem_total > 0 else 0.0
             )
@@ -571,7 +571,7 @@ def _worker_process_entry(
     uds_path: str,
     shm_prefix: str,
     model_configs: List[Dict[str, Any]],
-    ready_event: mp.Event,  # type: ignore[type-arg]
+    ready_event: "mp.Event",  # type: ignore[valid-type]
 ) -> None:
     """Entry point for a child worker process."""
     # Install signal handlers for graceful shutdown
@@ -600,7 +600,7 @@ def _worker_process_entry(
             config=cfg.get("config"),
         )
 
-    ready_event.set()
+    ready_event.set()  # type: ignore[attr-defined]
     server.start_uds_server(path=uds_path)
 
 
@@ -633,8 +633,8 @@ class WorkerPool:
         ]
         self._shm_prefix = shm_prefix
         self._base_uds_path = base_uds_path
-        self._processes: List[mp.Process] = []
-        self._ready_events: List[mp.Event] = []  # type: ignore[type-arg]
+        self._processes: List[mp.process.BaseProcess] = []
+        self._ready_events: List["mp.Event"] = []  # type: ignore[valid-type]
 
     def start(
         self,
@@ -678,7 +678,7 @@ class WorkerPool:
         deadline = time.monotonic() + timeout
         for idx, evt in enumerate(self._ready_events):
             remaining = max(0.1, deadline - time.monotonic())
-            if not evt.wait(timeout=remaining):
+            if not evt.wait(timeout=remaining):  # type: ignore[attr-defined]
                 logger.error(
                     "worker_start_timeout",
                     worker_id=f"worker-{idx}",

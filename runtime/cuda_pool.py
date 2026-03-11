@@ -110,7 +110,9 @@ class CUDAMemoryPool:
 
         # Pre-allocate one large contiguous buffer
         with torch.cuda.device(self._device):
-            self._buffer = torch.cuda.ByteTensor(self._pool_size)
+            self._buffer = torch.empty(
+                self._pool_size, dtype=torch.uint8, device=self._device
+            )
             self._base_ptr: int = self._buffer.data_ptr()
 
         # Internal bookkeeping -- list kept sorted by offset

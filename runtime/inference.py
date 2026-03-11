@@ -80,7 +80,7 @@ class ModelShard:
             )
 
         self._shards: List[nn.Sequential] = []
-        self._hooks: List[torch.utils.hooks.RemovableHook] = []
+        self._hooks: List[torch.utils.hooks.RemovableHandle] = []
         self._split_model(model)
 
     # -- splitting -----------------------------------------------------------
