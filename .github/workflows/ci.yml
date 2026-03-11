@@ -146,6 +146,12 @@ jobs:
 
       - name: Run tests
         run: |
+          TEST_FILES=$(find runtime/ -name "test_*.py" -o -name "*_test.py" | head -1)
+          if [ -z "$TEST_FILES" ]; then
+            echo "::warning::No Python test files found in runtime/ - skipping tests"
+            echo "Add test_*.py files to enable Python test coverage"
+            exit 0
+          fi
           python -m pytest runtime/ -v \
             --cov=runtime \
             --cov-report=xml:coverage-python.xml \
