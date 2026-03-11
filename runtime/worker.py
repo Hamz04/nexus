@@ -47,6 +47,7 @@ SEGMENT_CLEANUP_AGE_SEC: float = 300.0  # 5 min stale threshold
 # Shared memory transport
 # ---------------------------------------------------------------------------
 
+
 class SharedMemoryTransport:
     """IPC transport backed by POSIX shared memory (``/dev/shm``).
 
@@ -107,7 +108,9 @@ class SharedMemoryTransport:
 
     # -- tensor helpers ------------------------------------------------------
 
-    def read_tensor(self, segment_name: str) -> Tuple[bytes, Tuple[int, ...], nxtensor.DType]:
+    def read_tensor(
+        self, segment_name: str
+    ) -> Tuple[bytes, Tuple[int, ...], nxtensor.DType]:
         """Read and deserialize a Nexus tensor from *segment_name*."""
         mm = self.open_segment(segment_name)
         mm.seek(0)
@@ -162,9 +165,7 @@ class SharedMemoryTransport:
             if seg_path.exists():
                 seg_path.unlink()
 
-    def cleanup_stale(
-        self, max_age_sec: float = SEGMENT_CLEANUP_AGE_SEC
-    ) -> int:
+    def cleanup_stale(self, max_age_sec: float = SEGMENT_CLEANUP_AGE_SEC) -> int:
         """Remove stale segments older than *max_age_sec*.
 
         Returns the number of segments removed.
@@ -178,7 +179,7 @@ class SharedMemoryTransport:
             try:
                 age = now - entry.stat().st_mtime
                 if age > max_age_sec:
-                    seg_name = entry.name[len(prefix):]
+                    seg_name = entry.name[len(prefix) :]
                     self.close_segment(seg_name)
                     removed += 1
             except OSError:
@@ -202,6 +203,7 @@ class SharedMemoryTransport:
 # Model registry entry
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _ModelEntry:
     model_id: str
@@ -214,6 +216,7 @@ class _ModelEntry:
 # ---------------------------------------------------------------------------
 # WorkerServer -- serves inference requests from the Go router
 # ---------------------------------------------------------------------------
+
 
 class WorkerServer:
     """Serves inference requests received over shared memory from the Go
@@ -261,9 +264,7 @@ class WorkerServer:
         if config.get("quantize"):
             quantize_cfg = QuantizationConfig(
                 method=config["quantize"].get("method", "dynamic"),
-                calibration_samples=config["quantize"].get(
-                    "calibration_samples", 256
-                ),
+                calibration_samples=config["quantize"].get("calibration_samples", 256),
             )
 
         engine = InferenceEngine(
@@ -375,9 +376,7 @@ class WorkerServer:
             gpu_mem_used = torch.cuda.memory_allocated(dev_idx)
             gpu_mem_total = torch.cuda.get_device_properties(dev_idx).total_mem
             gpu_util = (
-                round(gpu_mem_used / gpu_mem_total, 4)
-                if gpu_mem_total > 0
-                else 0.0
+                round(gpu_mem_used / gpu_mem_total, 4) if gpu_mem_total > 0 else 0.0
             )
 
         with self._lock:
@@ -435,9 +434,7 @@ class WorkerServer:
         self._cleanup_thread.start()
 
         # Accept loop
-        executor = ThreadPoolExecutor(
-            max_workers=4, thread_name_prefix="uds-handler"
-        )
+        executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="uds-handler")
         try:
             while self._running:
                 try:
@@ -566,6 +563,7 @@ class WorkerServer:
 # ---------------------------------------------------------------------------
 # WorkerPool -- spawn N worker processes for parallel model serving
 # ---------------------------------------------------------------------------
+
 
 def _worker_process_entry(
     worker_id: str,
@@ -729,6 +727,7 @@ class WorkerPool:
 # ---------------------------------------------------------------------------
 # CLI entrypoint
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Standalone entry point: ``python -m nexus.runtime.worker``."""

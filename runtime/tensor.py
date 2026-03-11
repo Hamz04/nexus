@@ -145,6 +145,7 @@ class TensorFlags(enum.IntFlag):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _crc32c(data: bytes) -> int:
     """Compute a CRC-32C checksum.
 
@@ -169,6 +170,7 @@ def _align_offset(offset: int, alignment: int = ALIGNMENT) -> int:
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
+
 
 def serialize_tensor(
     data: bytes,
@@ -224,6 +226,7 @@ def serialize_tensor(
 # Deserialization
 # ---------------------------------------------------------------------------
 
+
 def deserialize_header(buf: Union[bytes, memoryview]) -> Dict[str, Any]:
     """Parse *only* the 32-byte fixed header (useful for routing decisions).
 
@@ -231,9 +234,7 @@ def deserialize_header(buf: Union[bytes, memoryview]) -> Dict[str, Any]:
     data_size, checksum, flags.
     """
     if len(buf) < HEADER_SIZE:
-        raise ValueError(
-            f"Buffer too small for header: {len(buf)} < {HEADER_SIZE}"
-        )
+        raise ValueError(f"Buffer too small for header: {len(buf)} < {HEADER_SIZE}")
     raw = bytes(buf[:HEADER_SIZE])
     (
         magic,
@@ -249,9 +250,7 @@ def deserialize_header(buf: Union[bytes, memoryview]) -> Dict[str, Any]:
     if magic != MAGIC:
         raise ValueError(f"Invalid magic bytes: {magic!r} (expected {MAGIC!r})")
     if version != HEADER_VERSION:
-        raise ValueError(
-            f"Unsupported version {version} (expected {HEADER_VERSION})"
-        )
+        raise ValueError(f"Unsupported version {version} (expected {HEADER_VERSION})")
 
     return {
         "magic": magic,
@@ -295,17 +294,14 @@ def deserialize_tensor(
     # Extract data
     data_end = data_offset + data_size
     if len(buf) < data_end:
-        raise ValueError(
-            f"Buffer too small for data: need {data_end}, got {len(buf)}"
-        )
+        raise ValueError(f"Buffer too small for data: need {data_end}, got {len(buf)}")
     data = bytes(buf[data_offset:data_end])
 
     if verify_checksum:
         computed = _crc32c(data)
         if computed != checksum:
             raise ValueError(
-                f"Checksum mismatch: expected 0x{checksum:08X}, "
-                f"got 0x{computed:08X}"
+                f"Checksum mismatch: expected 0x{checksum:08X}, got 0x{computed:08X}"
             )
 
     return data, shape, dtype
@@ -314,6 +310,7 @@ def deserialize_tensor(
 # ---------------------------------------------------------------------------
 # Numpy / Torch convenience helpers
 # ---------------------------------------------------------------------------
+
 
 def deserialize_to_numpy(
     buf: Union[bytes, memoryview],
@@ -389,18 +386,21 @@ def torch_to_nexus(
         raise RuntimeError("PyTorch is not installed")
     tensor = tensor.detach().cpu().contiguous()
     if dtype is None:
-        _torch_to_nexus = {v: k for k, v in {
-            DType.FLOAT32: torch.float32,
-            DType.FLOAT16: torch.float16,
-            DType.BFLOAT16: torch.bfloat16,
-            DType.INT8: torch.int8,
-            DType.INT16: torch.int16,
-            DType.INT32: torch.int32,
-            DType.INT64: torch.int64,
-            DType.UINT8: torch.uint8,
-            DType.BOOL: torch.bool,
-            DType.FLOAT64: torch.float64,
-        }.items()}
+        _torch_to_nexus = {
+            v: k
+            for k, v in {
+                DType.FLOAT32: torch.float32,
+                DType.FLOAT16: torch.float16,
+                DType.BFLOAT16: torch.bfloat16,
+                DType.INT8: torch.int8,
+                DType.INT16: torch.int16,
+                DType.INT32: torch.int32,
+                DType.INT64: torch.int64,
+                DType.UINT8: torch.uint8,
+                DType.BOOL: torch.bool,
+                DType.FLOAT64: torch.float64,
+            }.items()
+        }
         if tensor.dtype not in _torch_to_nexus:
             raise ValueError(f"Unsupported torch dtype: {tensor.dtype}")
         dtype = _torch_to_nexus[tensor.dtype]
@@ -416,6 +416,7 @@ def torch_to_nexus(
 # ---------------------------------------------------------------------------
 # MMapTensor -- zero-copy memory-mapped access
 # ---------------------------------------------------------------------------
+
 
 class MMapTensor:
     """Zero-copy, memory-mapped access to a Nexus tensor stored on disk.
@@ -446,9 +447,7 @@ class MMapTensor:
         ndim = self._header["ndim"]
         shape_start = HEADER_SIZE
         shape_end = shape_start + ndim * 8
-        self._shape = struct.unpack(
-            f"<{ndim}q", self._mm[shape_start:shape_end]
-        )
+        self._shape = struct.unpack(f"<{ndim}q", self._mm[shape_start:shape_end])
         self._dtype = self._header["dtype"]
         self._data_offset = self._header["data_offset"]
         self._data_size = self._header["data_size"]
@@ -492,7 +491,9 @@ class MMapTensor:
     def data_view(self) -> memoryview:
         """Return a zero-copy *memoryview* over the raw tensor data."""
         assert self._mm is not None
-        return memoryview(self._mm)[self._data_offset : self._data_offset + self._data_size]
+        return memoryview(self._mm)[
+            self._data_offset : self._data_offset + self._data_size
+        ]
 
     # -- materialisation helpers ---------------------------------------------
 

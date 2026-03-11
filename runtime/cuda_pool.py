@@ -28,6 +28,7 @@ except ImportError:  # pragma: no cover
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Block:
     """A contiguous region inside a memory pool."""
@@ -84,6 +85,7 @@ class PoolStats:
 # CUDAMemoryPool
 # ---------------------------------------------------------------------------
 
+
 class CUDAMemoryPool:
     """Pre-allocated contiguous CUDA memory pool with best-fit allocation.
 
@@ -135,9 +137,7 @@ class CUDAMemoryPool:
 
     # -- allocation ----------------------------------------------------------
 
-    def allocate(
-        self, size_bytes: int, stream: Optional[Any] = None
-    ) -> MemoryBlock:
+    def allocate(self, size_bytes: int, stream: Optional[Any] = None) -> MemoryBlock:
         """Allocate *size_bytes* from the pool using best-fit strategy.
 
         Parameters
@@ -226,9 +226,7 @@ class CUDAMemoryPool:
                         target = blk
                         break
             if target is None or not target.allocated:
-                raise ValueError(
-                    f"Block at offset 0x{block.offset:X} is not allocated"
-                )
+                raise ValueError(f"Block at offset 0x{block.offset:X} is not allocated")
 
             target.allocated = False
             target.stream = None
@@ -268,9 +266,7 @@ class CUDAMemoryPool:
             free_blocks = [b for b in self._blocks if not b.allocated]
             free_bytes = sum(b.size for b in free_blocks)
             largest_free = max((b.size for b in free_blocks), default=0)
-            frag = (
-                1.0 - (largest_free / free_bytes) if free_bytes > 0 else 0.0
-            )
+            frag = 1.0 - (largest_free / free_bytes) if free_bytes > 0 else 0.0
             return PoolStats(
                 total_bytes=self._pool_size,
                 allocated_bytes=self._total_allocated,
@@ -291,9 +287,7 @@ class CUDAMemoryPool:
             "gpu_memory_pool_free_bytes": s.free_bytes,
             "gpu_memory_pool_peak_bytes": s.peak_usage_bytes,
             "gpu_memory_pool_utilization": (
-                round(s.allocated_bytes / s.total_bytes, 4)
-                if s.total_bytes
-                else 0.0
+                round(s.allocated_bytes / s.total_bytes, 4) if s.total_bytes else 0.0
             ),
             "gpu_memory_pool_fragmentation": s.fragmentation_ratio,
             "gpu_memory_pool_allocations_total": s.num_allocations,
@@ -331,6 +325,7 @@ class CUDAMemoryPool:
 # PinnedMemoryPool -- CPU pinned (page-locked) memory for fast H2D copies
 # ---------------------------------------------------------------------------
 
+
 class PinnedMemoryPool:
     """Pool of CPU page-locked (pinned) memory for fast host-to-device
     transfers.
@@ -349,9 +344,7 @@ class PinnedMemoryPool:
         self._lock = threading.Lock()
 
         # Pin a large host buffer
-        self._buffer = torch.empty(
-            self._pool_size, dtype=torch.uint8, pin_memory=True
-        )
+        self._buffer = torch.empty(self._pool_size, dtype=torch.uint8, pin_memory=True)
         self._base_ptr: int = self._buffer.data_ptr()
 
         self._blocks: List[Block] = [
@@ -436,9 +429,7 @@ class PinnedMemoryPool:
                         target = blk
                         break
             if target is None or not target.allocated:
-                raise ValueError(
-                    f"Block at offset 0x{block.offset:X} is not allocated"
-                )
+                raise ValueError(f"Block at offset 0x{block.offset:X} is not allocated")
 
             target.allocated = False
             self._total_allocated -= target.size
@@ -469,9 +460,7 @@ class PinnedMemoryPool:
             free_blocks = [b for b in self._blocks if not b.allocated]
             free_bytes = sum(b.size for b in free_blocks)
             largest_free = max((b.size for b in free_blocks), default=0)
-            frag = (
-                1.0 - (largest_free / free_bytes) if free_bytes > 0 else 0.0
-            )
+            frag = 1.0 - (largest_free / free_bytes) if free_bytes > 0 else 0.0
             return PoolStats(
                 total_bytes=self._pool_size,
                 allocated_bytes=self._total_allocated,
@@ -492,9 +481,7 @@ class PinnedMemoryPool:
             "pinned_memory_pool_free_bytes": s.free_bytes,
             "pinned_memory_pool_peak_bytes": s.peak_usage_bytes,
             "pinned_memory_pool_utilization": (
-                round(s.allocated_bytes / s.total_bytes, 4)
-                if s.total_bytes
-                else 0.0
+                round(s.allocated_bytes / s.total_bytes, 4) if s.total_bytes else 0.0
             ),
             "pinned_memory_pool_fragmentation": s.fragmentation_ratio,
             "pinned_memory_pool_allocations_total": s.num_allocations,

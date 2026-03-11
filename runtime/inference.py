@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # QuantizationConfig
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class QuantizationConfig:
     """Configuration for post-training quantization.
@@ -56,6 +57,7 @@ class QuantizationConfig:
 # ModelShard -- tensor parallelism across multiple GPUs
 # ---------------------------------------------------------------------------
 
+
 class ModelShard:
     """Splits a model across multiple CUDA devices for tensor parallelism.
 
@@ -71,9 +73,7 @@ class ModelShard:
         devices: Optional[List[str]] = None,
     ) -> None:
         self._num_shards = num_shards
-        self._devices = devices or [
-            f"cuda:{i}" for i in range(num_shards)
-        ]
+        self._devices = devices or [f"cuda:{i}" for i in range(num_shards)]
         if len(self._devices) < num_shards:
             raise ValueError(
                 f"Need at least {num_shards} devices, got {len(self._devices)}"
@@ -175,6 +175,7 @@ class ModelShard:
 # ---------------------------------------------------------------------------
 # InferenceEngine
 # ---------------------------------------------------------------------------
+
 
 class InferenceEngine:
     """Mixed-precision inference engine with optional INT8 quantization.
@@ -312,8 +313,11 @@ class InferenceEngine:
         logger.info("Warming up with %d dummy forward passes", num_runs)
         dummy = torch.randn(input_shape, dtype=self._torch_dtype, device=self._device)
 
-        with torch.no_grad(), torch.cuda.amp.autocast(
-            enabled=(self._torch_dtype == torch.float16),
+        with (
+            torch.no_grad(),
+            torch.cuda.amp.autocast(
+                enabled=(self._torch_dtype == torch.float16),
+            ),
         ):
             for _ in range(num_runs):
                 self._model(dummy)
@@ -373,9 +377,7 @@ class InferenceEngine:
         assert self._model is not None
 
         # Stack individual inputs into one batch
-        batched = torch.stack(batch_inputs, dim=0).to(
-            self._device, non_blocking=True
-        )
+        batched = torch.stack(batch_inputs, dim=0).to(self._device, non_blocking=True)
         batch_size = batched.shape[0]
 
         use_autocast = self._torch_dtype in (torch.float16, torch.bfloat16)
@@ -390,11 +392,7 @@ class InferenceEngine:
         results: List[Dict[str, torch.Tensor]] = []
         if isinstance(raw_output, torch.Tensor):
             for i in range(batch_size):
-                name = (
-                    output_names[0]
-                    if output_names
-                    else "output"
-                )
+                name = output_names[0] if output_names else "output"
                 results.append({name: raw_output[i]})
         elif isinstance(raw_output, dict):
             for i in range(batch_size):
@@ -467,16 +465,17 @@ class InferenceEngine:
         self._ensure_loaded()
         assert self._model is not None
 
-        dummy = torch.randn(
-            input_shape, dtype=self._torch_dtype, device=self._device
-        )
+        dummy = torch.randn(input_shape, dtype=self._torch_dtype, device=self._device)
 
         use_autocast = self._torch_dtype in (torch.float16, torch.bfloat16)
 
         # Warmup
-        with torch.no_grad(), torch.cuda.amp.autocast(
-            enabled=use_autocast,
-            dtype=self._torch_dtype if use_autocast else None,
+        with (
+            torch.no_grad(),
+            torch.cuda.amp.autocast(
+                enabled=use_autocast,
+                dtype=self._torch_dtype if use_autocast else None,
+            ),
         ):
             for _ in range(warmup_iterations):
                 self._model(dummy)
@@ -484,9 +483,12 @@ class InferenceEngine:
 
         # Timed runs
         latencies: List[float] = []
-        with torch.no_grad(), torch.cuda.amp.autocast(
-            enabled=use_autocast,
-            dtype=self._torch_dtype if use_autocast else None,
+        with (
+            torch.no_grad(),
+            torch.cuda.amp.autocast(
+                enabled=use_autocast,
+                dtype=self._torch_dtype if use_autocast else None,
+            ),
         ):
             for _ in range(num_iterations):
                 start_event = torch.cuda.Event(enable_timing=True)
@@ -511,9 +513,7 @@ class InferenceEngine:
             "p99_ms": round(latencies[int(n * 0.99)], 3),
             "min_ms": round(latencies[0], 3),
             "max_ms": round(latencies[-1], 3),
-            "throughput_samples_per_sec": round(
-                (batch_size * 1000.0) / mean_ms, 2
-            ),
+            "throughput_samples_per_sec": round((batch_size * 1000.0) / mean_ms, 2),
             "num_iterations": num_iterations,
         }
 
@@ -541,9 +541,7 @@ class InferenceEngine:
 
     def _ensure_loaded(self) -> None:
         if not self._is_loaded or self._model is None:
-            raise RuntimeError(
-                "Model not loaded -- call load_model() first"
-            )
+            raise RuntimeError("Model not loaded -- call load_model() first")
 
     @property
     def is_loaded(self) -> bool:
@@ -568,6 +566,7 @@ class InferenceEngine:
 # ---------------------------------------------------------------------------
 # Internal helper to wrap ModelShard as an nn.Module-like callable
 # ---------------------------------------------------------------------------
+
 
 class _ShardWrapper(nn.Module):
     """Thin wrapper so that :class:`ModelShard` can be called like a
